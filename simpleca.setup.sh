@@ -221,11 +221,10 @@ exit
 #./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p heslo -g heslo2 -f /root/ca
 
 
-
 openssl req -config intermediate/openssl.cnf -key intermediate/private/host2.example.com.key.pem -new -sha256 -out intermediate/csr/host2.example.com.csr.pem -subj "/C=SE/ST=Country/L=Ostrava/O=Company/OU=ITdept
 openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
 SUBJ="/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
-cho "SUBJ - ${SUBJ} "
+echo "SUBJ - ${SUBJ}"
 openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
 eval openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj \"${SUBJ}\"
 
