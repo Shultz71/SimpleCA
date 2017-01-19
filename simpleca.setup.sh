@@ -180,6 +180,9 @@ echo "PASSWORD=\"${TMP}\"" >> $SIMPLECACONF
 
 WORKDIR=`pwd`
 
+#----------------------------------------------------------
+#   Create the root pair
+#----------------------------------------------------------
 
 # Prepare the directory ----------------------------------------------------
 mkdir ${CADIR}
@@ -209,17 +212,49 @@ chmod 400 private/ca.key.pem
 
 # Create the root certificate ------------------------------------------------
 cd ${CADIR}
-openssl req -config openssl.cnf \
-      -key private/ca.key.pem \
-      -new -x509 -days 7300 -sha256 -extensions v3_ca \
-      -out certs/ca.cert.pem
+
+set -x
+SUBJ="/C=${COUNTRYCODE}/ST=${COUNTRY}/L=${LOCALITY}/O=${ORGANIZATION}/OU=${ORGANIZATIONUNIT}/CN=${COMMONNAME}"
+echo "SUBJ - ${SUBJ}"
+eval openssl req -new -passin pass:${PASSWORD} -config openssl.cnf -key private/ca.key.pem -x509 -days 7300 -sha256 -extensions v3_ca -out certs/ca.cert.pem -subj \"${SUBJ}\"
 chmod 444 certs/ca.cert.pem
+
+# Verify the root certificate ------------------------------------------------
+openssl x509 -noout -text -in certs/ca.cert.pem > ${CADIR}/rootkey.verification.txt
+
+#----------------------------------------------------------
+#   Create the intermediate pair
+#----------------------------------------------------------
+CADIRINM="${CADIR}/intermediate"
+mkdir ${CADIRINM}
+chmod 700 ${CADIRINM}
+mkdir certs crl csr newcerts private
+chmod 700 private
+touch index.txt
+echo 1000 > serial
+echo 1000 > crlnumber
+
+OPENSSLCONFINM="${CADIRINM}/openssl.cnf"
+cat ${WORKDIR}/${OPENSSLCONFTEMPLATEIM} > $OPENSSLCONFINM
+sed -i -e "s/~~CA-NAME~~/${CANAME}/" $OPENSSLCONFINM
+sed -i -e "s/~~COUNTRY~~/${COUNTRY}/" $OPENSSLCONFINM
+sed -i -e "s/~~COUNTRYCODE~~/${COUNTRYCODE}/" $OPENSSLCONFINM
+sed -i -e "s/~~LOCALITY~~/${LOCALITY}/" $OPENSSLCONFINM
+sed -i -e "s/~~ORGANIZATION~~/${ORGANIZATION}/" $OPENSSLCONFINM
+sed -i -e "s/~~ORGANIZATIONUNIT~~/${ORGANIZATIONUNIT}/" $OPENSSLCONFINM
+sed -i -e "s/~~COMMONNAME~~/${COMMONNAME}/" $OPENSSLCONFINM
+
+
+
+
+
+
+
 
 
 exit
 #
 #./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p heslo -g heslo2 -f /root/ca
-
 
 openssl req -config intermediate/openssl.cnf -key intermediate/private/host2.example.com.key.pem -new -sha256 -out intermediate/csr/host2.example.com.csr.pem -subj "/C=SE/ST=Country/L=Ostrava/O=Company/OU=ITdept
 openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
@@ -227,4 +262,10 @@ SUBJ="/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
 echo "SUBJ - ${SUBJ}"
 openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
 eval openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj \"${SUBJ}\"
+
+
+
+TODO:
+- openssl config $dir
+
 
