@@ -196,6 +196,7 @@ echo 1000 > serial
 # Prepare the configuration file ------------------------------------------
 OPENSSLCONF="${CADIR}/openssl.cnf"
 cat ${WORKDIR}/${OPENSSLCONFTEMPLATE} > $OPENSSLCONF
+sed -i -e "s:~~CADIR~~:${CADIR}:" $OPENSSLCONF
 sed -i -e "s/~~CA-NAME~~/${CANAME}/" $OPENSSLCONF
 sed -i -e "s/~~COUNTRY~~/${COUNTRY}/" $OPENSSLCONF
 sed -i -e "s/~~COUNTRYCODE~~/${COUNTRYCODE}/" $OPENSSLCONF
@@ -225,6 +226,9 @@ openssl x509 -noout -text -in certs/ca.cert.pem > ${CADIR}/rootkey.verification.
 #----------------------------------------------------------
 #   Create the intermediate pair
 #----------------------------------------------------------
+
+# Prepare the directory ------------------------------------------------------
+
 CADIRINM="${CADIR}/intermediate"
 mkdir ${CADIRINM}
 chmod 700 ${CADIRINM}
@@ -236,6 +240,7 @@ echo 1000 > crlnumber
 
 OPENSSLCONFINM="${CADIRINM}/openssl.cnf"
 cat ${WORKDIR}/${OPENSSLCONFTEMPLATEIM} > $OPENSSLCONFINM
+sed -i -e "s:~~CADIRINM~~:${CADIRINM}:" $OPENSSLCONFINM
 sed -i -e "s/~~CA-NAME~~/${CANAME}/" $OPENSSLCONFINM
 sed -i -e "s/~~COUNTRY~~/${COUNTRY}/" $OPENSSLCONFINM
 sed -i -e "s/~~COUNTRYCODE~~/${COUNTRYCODE}/" $OPENSSLCONFINM
@@ -244,11 +249,10 @@ sed -i -e "s/~~ORGANIZATION~~/${ORGANIZATION}/" $OPENSSLCONFINM
 sed -i -e "s/~~ORGANIZATIONUNIT~~/${ORGANIZATIONUNIT}/" $OPENSSLCONFINM
 sed -i -e "s/~~COMMONNAME~~/${COMMONNAME}/" $OPENSSLCONFINM
 
-
-
-
-
-
+# Create the intermediate key ------------------------------------------------
+#cd /root/ca
+#openssl genrsa -aes256  -out intermediate/private/intermediate.key.pem 4096
+#chmod 400 intermediate/private/intermediate.key.pem
 
 
 
