@@ -5,6 +5,7 @@ MYDEBUG=1   # debug ON  to disable comment out the line
 SIMPLECACONF="/etc/simpleca.conf"
 OPENSSLCONFTEMPLATE="openssl.cnf.TEMPLATE"
 OPENSSLCONFTEMPLATEIM="openssl_im.cnf.TEMPLATE"
+INMSUBDIR="intermediate"
 
 #------------------------------------------------
 usage() {
@@ -193,7 +194,7 @@ chmod 700 private
 touch index.txt
 echo 1000 > serial
 
-# Prepare the configuration file ------------------------------------------
+# Prepare the configuration file ---------------------------------------------
 OPENSSLCONF="${CADIR}/openssl.cnf"
 cat ${WORKDIR}/${OPENSSLCONFTEMPLATE} > $OPENSSLCONF
 sed -i -e "s:~~CADIR~~:${CADIR}:" $OPENSSLCONF
@@ -205,16 +206,14 @@ sed -i -e "s/~~ORGANIZATION~~/${ORGANIZATION}/" $OPENSSLCONF
 sed -i -e "s/~~ORGANIZATIONUNIT~~/${ORGANIZATIONUNIT}/" $OPENSSLCONF
 sed -i -e "s/~~COMMONNAME~~/${COMMONNAME}/" $OPENSSLCONF
 
-set -x
-# Create the root key ------------------------------------------------------
+# Create the root key --------------------------------------------------------
 cd ${CADIR}
 openssl genrsa -aes256 -out private/ca.key.pem -passout pass:${PASSWORD} 4096
 chmod 400 private/ca.key.pem
 
-# Create the root certificate ------------------------------------------------
+# Create the root certificate -------------------------------------------------
 cd ${CADIR}
 
-set -x
 SUBJ="/C=${COUNTRYCODE}/ST=${COUNTRY}/L=${LOCALITY}/O=${ORGANIZATION}/OU=${ORGANIZATIONUNIT}/CN=${COMMONNAME}"
 echo "SUBJ - ${SUBJ}"
 eval openssl req -new -passin pass:${PASSWORD} -config openssl.cnf -key private/ca.key.pem -x509 -days 7300 -sha256 -extensions v3_ca -out certs/ca.cert.pem -subj \"${SUBJ}\"
@@ -229,9 +228,10 @@ openssl x509 -noout -text -in certs/ca.cert.pem > ${CADIR}/rootkey.verification.
 
 # Prepare the directory ------------------------------------------------------
 
-CADIRINM="${CADIR}/intermediate"
+CADIRINM="${CADIR}/${INMSUBDIR}"
 mkdir ${CADIRINM}
 chmod 700 ${CADIRINM}
+cd ${CADIRINM}
 mkdir certs crl csr newcerts private
 chmod 700 private
 touch index.txt
@@ -250,26 +250,33 @@ sed -i -e "s/~~ORGANIZATIONUNIT~~/${ORGANIZATIONUNIT}/" $OPENSSLCONFINM
 sed -i -e "s/~~COMMONNAME~~/${COMMONNAME}/" $OPENSSLCONFINM
 
 # Create the intermediate key ------------------------------------------------
-#cd /root/ca
-#openssl genrsa -aes256  -out intermediate/private/intermediate.key.pem 4096
-#chmod 400 intermediate/private/intermediate.key.pem
+cd ${CADIR}
+openssl genrsa -aes256  -out ${INMSUBDIR}/private/intermediate.key.pem -passout pass:${PASSWORD} 4096
+chmod 400 ${INMSUBDIR}/private/intermediate.key.pem
 
+# Create the intermediate certificate ----------------------------------------
+cd ${CADIR}
+SUBJ="/C=${COUNTRYCODE}/ST=${COUNTRY}/L=${LOCALITY}/O=${ORGANIZATION}/OU=${ORGANIZATIONUNIT}/CN=${COMMONNAME}"
+eval openssl req -new -passin pass:${PASSWORD} -config ${INMSUBDIR}/openssl.cnf -sha256 -key ${INMSUBDIR}/private/intermediate.key.pem -out ${INMSUBDIR}/csr/intermediate.csr.pem -subj \"${SUBJ}\"
+openssl ca -config openssl.cnf -extensions v3_intermediate_ca -days 3650 -notext -md sha256 -in ${INMSUBDIR}/csr/intermediate.csr.pem -out ${INMSUBDIR}/certs/intermediate.cert.pem -batch -passin pass:${PASSWORD}
+chmod 444 ${INMSUBDIR}/certs/intermediate.cert.pem
 
+# Verify the intermediate certificate ----------------------------------------
+openssl x509 -noout -text -in ${INMSUBDIR}/certs/intermediate.cert.pem > ${CADIRINM}/intermediate_certificate.txt
+echo -ne "\n" >> ${CADIRINM}/intermediate_certificate.txt
+openssl verify -CAfile certs/ca.cert.pem ${INMSUBDIR}/certs/intermediate.cert.pem >> ${CADIRINM}/intermediate_certificate.txt
+
+# Create the certificate chain file
+cat ${INMSUBDIR}/certs/intermediate.cert.pem certs/ca.cert.pem > ${INMSUBDIR}/certs/ca-chain.cert.pem
+chmod 444 ${INMSUBDIR}/certs/ca-chain.cert.pem
 
 exit
 #
-#./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p heslo -g heslo2 -f /root/ca
-
-openssl req -config intermediate/openssl.cnf -key intermediate/private/host2.example.com.key.pem -new -sha256 -out intermediate/csr/host2.example.com.csr.pem -subj "/C=SE/ST=Country/L=Ostrava/O=Company/OU=ITdept
-openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
-SUBJ="/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
-echo "SUBJ - ${SUBJ}"
-openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
-eval openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj \"${SUBJ}\"
+#./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p heslo -g heslo2 -f /root/myCA
 
 
-
-TODO:
-- openssl config $dir
-
+todo:
+ - Check OK at the last line of intermediate_certificate.txt
+ - copy binary to /bin
+ - use depasswording
 
