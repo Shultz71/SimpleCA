@@ -6,6 +6,10 @@ SIMPLECACONF="/etc/simpleca.conf"
 OPENSSLCONFTEMPLATE="openssl.cnf.TEMPLATE"
 OPENSSLCONFTEMPLATEIM="openssl_im.cnf.TEMPLATE"
 INMSUBDIR="intermediate"
+KEYBITS_DEFAULT="2048"
+DAYS_DEFAULT="3650"
+WEB_CRT_DIR_DEFAULT="/var/www/ca/certificates"
+WEB_PKCS12_DIR_DEFAULT="/var/www/ca/pkcs12"
 
 #------------------------------------------------
 usage() {
@@ -173,11 +177,21 @@ if [ "$MYDEBUG" ] ; then
     echo "CADIR            = $CADIR"
 fi
 
-> $SIMPLECACONF
-echo "CADIR=\"${CADIR}\"" >> $SIMPLECACONF
 TMP=`echo "${PASSWORD}" | openssl enc -aes-128-cbc -a -salt -pass pass:${CFGPASSWORD}`
-echo "PASSWORD=\"${TMP}\"" >> $SIMPLECACONF
-#echo "" >> $SIMPLECACONF
+> $SIMPLECACONF
+echo "CADIR=\"${CADIR}\""                           >> $SIMPLECACONF
+echo "PASSWORD=\"${TMP}\""                          >> $SIMPLECACONF
+echo "KEYBITS=${KEYBITS_DEFAULT}"                   >> $SIMPLECACONF
+echo "DAYS=${DAYS_DEFAULT}"                         >> $SIMPLECACONF
+echo "CANAME=\"${CANAME}\""                         >> $SIMPLECACONF
+echo "COMMONNAME=\"{$COMMONNAME}\""                 >> $SIMPLECACONF
+echo "COUNTRY=\"${COUNTRY}\""                       >> $SIMPLECACONF
+echo "COUNTRYCODE=\"${COUNTRYCODE}\""               >> $SIMPLECACONF
+echo "LOCALITY=\"${LOCALITY}\""                     >> $SIMPLECACONF
+echo "ORGANIZATION=\"${ORGANIZATION}\""             >> $SIMPLECACONF
+echo "ORGANIZATIONUNIT=\"{$ORGANIZATIONUNIT}\""     >> $SIMPLECACONF
+echo "WEB_CRT_DIR=\"${WEB_CRT_DIR_DEFAULT}\""       >> $SIMPLECACONF
+echo "WEB_PKCS12_DIR=\"${WEB_PKCS12_DIR_DEFAULT}\"" >> $SIMPLECACONF
 
 WORKDIR=`pwd`
 
