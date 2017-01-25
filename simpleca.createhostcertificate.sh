@@ -1,6 +1,14 @@
 #!/bin/bash
 
-__PKCS12PASS="pksc12"
+SIMPLECACONF="/etc/simpleca.conf"
+
+if [ -f ${SIMPLECACONF} ] ; then
+    source ${SIMPLECACONF}
+else
+    echoerr "Configuration file ${SIMPLECACONF} not found"
+    exit 1
+fi
+
 
 CA_ROOT_DIR="${CADIR}"
 CA_CSR_DIR="${CA_ROOT_DIR}/intermediate/csr"
@@ -10,7 +18,15 @@ CA_PKCS12_DIR="${CA_ROOT_DIR}/intermediate/pkcs12"
 OPENSSLCONF="${CA_ROOT_DIR}/intermediate/openssl.cnf"
 SANDIR="${CA_ROOT_DIR}/san-openssl.conf"
 
-FQDN=$1
+
+#-----------------------------------------------------------------
+echoerr () {
+    echo "$*" >&2
+}
+#-----------------------------------------------------------------
+echodebug () {
+    if [ $MYDEBUG ] ; then  echo "$*"; fi
+}
 
 #-----------------------------------------------------------------
 printhelp () {
@@ -35,6 +51,9 @@ if [ $# -lt 2 ] ; then
     exit 1
 fi
 
+CFGPASSWORD=$1
+FQDN=$2
+
 if [ $# -gt 2 ] ; then
     #echo "SAN mon ON"
     SANMODE=1
@@ -52,6 +71,13 @@ else
     #echo "SAN mon off"
     SANMODE=0
 fi
+
+TMP=`echo "${PASSWORD}" | openssl enc -aes-128-cbc -a -d -salt -pass pass:${CFGPASSWORD}`
+PASSWORD=${TMP}
+
+echo "PASSWORD = $PASSWORD"
+exit
+
 
 #.............................................................................
 cd $CA_ROOT_DIR
@@ -118,7 +144,7 @@ echo "------------------------------------------------ verification"
 echo "------------------------------------------------ pkcs12"
 mkdir -p $CA_PKCS12_DIR
 #openssl pkcs12 -export -in intermediate/certs/virtsrv1.example.com.cert.pem -inkey intermediate/private/virtsrv1.example.com.key.pem -out virtsrv1.example.com.pkcs12
- openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pkcs12 -password pass:${__PKCS12PASS}
+ openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pkcs12 -password pass:${PKCS12PASS}
  cp ${CA_PKCS12_DIR}/${FQDN}.pkcs12 ${WEB_PKCS12_DIR}
  chmod 644 ${WEB_PKCS12_DIR}/*.pkcs12
 

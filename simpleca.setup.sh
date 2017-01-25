@@ -10,6 +10,7 @@ KEYBITS_DEFAULT="2048"
 DAYS_DEFAULT="3650"
 WEB_CRT_DIR_DEFAULT="/var/www/ca/certificates"
 WEB_PKCS12_DIR_DEFAULT="/var/www/ca/pkcs12"
+PKCS12PASS_DEFAULT="pksc12"
 
 #------------------------------------------------
 usage() {
@@ -153,6 +154,7 @@ if [ "${ORGANIZATIONUNIT:-NULL}" = "NULL" ] ; then  PARAMETERSERR=1; echoerr "..
 if [ "${PASSWORD:-NULL}" = "NULL" ] ;         then  PARAMETERSERR=1; echoerr "... missing password"; fi
 if [ "${CFGPASSWORD:-NULL}" = "NULL" ] ;      then  PARAMETERSERR=1; echoerr "... missing cfg. file password"; fi
 if [ "${CADIR:-NULL}" = "NULL" ] ;            then  PARAMETERSERR=1; echoerr "... missing CA directory"; fi
+PKCS12PASS=${PKCS12PASS-$PKCS12PASS_DEFAULT}
 
 if [ $PARAMETERSERR -ne 0 ] ; then
     echoerr "cannot continue ... exiting"
@@ -190,6 +192,7 @@ echo "COUNTRYCODE=\"${COUNTRYCODE}\""               >> $SIMPLECACONF
 echo "LOCALITY=\"${LOCALITY}\""                     >> $SIMPLECACONF
 echo "ORGANIZATION=\"${ORGANIZATION}\""             >> $SIMPLECACONF
 echo "ORGANIZATIONUNIT=\"{$ORGANIZATIONUNIT}\""     >> $SIMPLECACONF
+echo "PKCS12PASS=\"${PKCS12PASS}\""                 >> $SIMPLECACONF
 echo "WEB_CRT_DIR=\"${WEB_CRT_DIR_DEFAULT}\""       >> $SIMPLECACONF
 echo "WEB_PKCS12_DIR=\"${WEB_PKCS12_DIR_DEFAULT}\"" >> $SIMPLECACONF
 
