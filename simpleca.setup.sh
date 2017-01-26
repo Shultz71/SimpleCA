@@ -3,6 +3,7 @@
 MYDEBUG=1   # debug ON  to disable comment out the line
 
 SIMPLECACONF="/etc/simpleca.conf"
+SIMPLECALOG="/var/log/simpleca.log"
 OPENSSLCONFTEMPLATE="openssl.cnf.TEMPLATE"
 OPENSSLCONFTEMPLATEIM="openssl_im.cnf.TEMPLATE"
 INMSUBDIR="intermediate"
@@ -181,20 +182,21 @@ fi
 
 TMP=`echo "${PASSWORD}" | openssl enc -aes-128-cbc -a -salt -pass pass:${CFGPASSWORD}`
 > $SIMPLECACONF
+echo "CANAME=\"${CANAME}\""                         >> $SIMPLECACONF
 echo "CADIR=\"${CADIR}\""                           >> $SIMPLECACONF
 echo "PASSWORD=\"${TMP}\""                          >> $SIMPLECACONF
-echo "KEYBITS=${KEYBITS_DEFAULT}"                   >> $SIMPLECACONF
-echo "DAYS=${DAYS_DEFAULT}"                         >> $SIMPLECACONF
-echo "CANAME=\"${CANAME}\""                         >> $SIMPLECACONF
 echo "COMMONNAME=\"{$COMMONNAME}\""                 >> $SIMPLECACONF
 echo "COUNTRY=\"${COUNTRY}\""                       >> $SIMPLECACONF
 echo "COUNTRYCODE=\"${COUNTRYCODE}\""               >> $SIMPLECACONF
 echo "LOCALITY=\"${LOCALITY}\""                     >> $SIMPLECACONF
 echo "ORGANIZATION=\"${ORGANIZATION}\""             >> $SIMPLECACONF
 echo "ORGANIZATIONUNIT=\"{$ORGANIZATIONUNIT}\""     >> $SIMPLECACONF
+echo "KEYBITS=${KEYBITS_DEFAULT}"                   >> $SIMPLECACONF
+echo "DAYS=${DAYS_DEFAULT}"                         >> $SIMPLECACONF
 echo "PKCS12PASS=\"${PKCS12PASS}\""                 >> $SIMPLECACONF
 echo "WEB_CRT_DIR=\"${WEB_CRT_DIR_DEFAULT}\""       >> $SIMPLECACONF
 echo "WEB_PKCS12_DIR=\"${WEB_PKCS12_DIR_DEFAULT}\"" >> $SIMPLECACONF
+echo "SIMPLECALOG=\"${SIMPLECALOG}\""               >> $SIMPLECACONF
 
 WORKDIR=`pwd`
 
