@@ -6,12 +6,13 @@ SIMPLECACONF="/etc/simpleca.conf"
 SIMPLECALOG="/var/log/simpleca.log"
 OPENSSLCONFTEMPLATE="openssl.cnf.TEMPLATE"
 OPENSSLCONFTEMPLATEIM="openssl_im.cnf.TEMPLATE"
+CREATECRTCMD="simpleca.createhostcertificate.sh"
+CRTCMDDIR="/usr/bin"
 INMSUBDIR="intermediate"
 KEYBITS_DEFAULT="2048"
 DAYS_DEFAULT="3650"
 WEB_CRT_DIR_DEFAULT="/var/www/ca/certificates"
 WEB_PKCS12_DIR_DEFAULT="/var/www/ca/pkcs12"
-PKCS12PASS_DEFAULT="pksc12"
 
 #------------------------------------------------
 usage() {
@@ -26,7 +27,6 @@ usage() {
 
   Example:
 EOF
-
 }
 
 #------------------------------------------------
@@ -40,6 +40,11 @@ echodebug () {
 
 if [ ! `id -u` -eq 0 ] ; then
     echoerr "You are not root - exiting"
+    exit 1
+fi
+
+if [ -d "${CADIR}" ] ; then
+    echoerr "... CA directory ${CADIR} already exists"
     exit 1
 fi
 
@@ -58,6 +63,19 @@ if [ ! -f $OPENSSLCONFTEMPLATEIM ] ; then
     exit 1
 fi
 
+if [ ! -f $CREATECRTCMD ] ; then
+    echoerr "Cannot found $CREATECRTCMD ... exiting"
+    exit 1
+else
+    if [ -f ${CRTCMDDIR}/${CREATECRTCMD} ] ; then
+        TMP=`date '+%Y%m%d-%H%M'`
+        mv ${CRTCMDDIR}/${CREATECRTCMD} ${CRTCMDDIR}/${CREATECRTCMD}.${TMP}
+        chmod a-x ${CRTCMDDIR}/${CREATECRTCMD}.${TMP}
+    fi
+    cat $CREATECRTCMD > ${CRTCMDDIR}/${CREATECRTCMD}
+    chmod 0744 ${CRTCMDDIR}/${CREATECRTCMD}
+fi
+
 # read the options
 # ~~CA-NAME~~           --ca-name           -a
 # ~~COMMONNAME~~        --commonname        -n
@@ -69,10 +87,11 @@ fi
 #                       --password          -p
 #                       --configpassword    -g
 #                       --cafolder          -f
+#                       --pkcs12password    -k
 
 PRGNAME=`basename $0`
 #OPTIONS=`getopt -o a::bc:h --long arga::,argb,argc:,help -n $PRGNAME -- "$@"`
-OPTIONS=`getopt -o a:n:c:d:l:o:u:p:g:f: --long ca-name:,commonname:,country:,countrycode:,locality:,organization:,organizationunit:password:,configpassword:,cafolder:,help -n $PRGNAME -- "$@"`
+OPTIONS=`getopt -o a:n:c:d:l:o:u:p:g:f:k:h --long ca-name:,commonname:,country:,countrycode:,locality:,organization:,organizationunit:password:,configpassword:,cafolder:,pkcs12password:,help -n $PRGNAME -- "$@"`
 if [ $? -ne 0 ] ; then
     usage
     exit 1
@@ -127,6 +146,11 @@ while true ; do
                 "") shift 2 ;;
                 *) CFGPASSWORD="$2" ; shift 2 ;;
             esac ;;
+        -k|--pkcs12password)
+            case "$2" in
+                "") shift 2 ;;
+                *) PKCS12PASS="$2" ; shift 2 ;;
+            esac ;;
         -f|--cafolder)
             case "$2" in
                 "") shift 2 ;;
@@ -142,7 +166,7 @@ while true ; do
 done
 
 #-------------------------------------------------------------------------- Main()
-#set -x
+
 #check missing paramaters:
 PARAMETERSERR=0
 if [ "${CANAME:-NULL}" = "NULL" ] ;           then  PARAMETERSERR=1; echoerr "... missing CA name"; fi
@@ -155,15 +179,10 @@ if [ "${ORGANIZATIONUNIT:-NULL}" = "NULL" ] ; then  PARAMETERSERR=1; echoerr "..
 if [ "${PASSWORD:-NULL}" = "NULL" ] ;         then  PARAMETERSERR=1; echoerr "... missing password"; fi
 if [ "${CFGPASSWORD:-NULL}" = "NULL" ] ;      then  PARAMETERSERR=1; echoerr "... missing cfg. file password"; fi
 if [ "${CADIR:-NULL}" = "NULL" ] ;            then  PARAMETERSERR=1; echoerr "... missing CA directory"; fi
-PKCS12PASS=${PKCS12PASS-$PKCS12PASS_DEFAULT}
+if [ "${PKCS12PASS:-NULL}" = "NULL" ] ;       then  PARAMETERSERR=1; echoerr "... missing PKCS12 password"; fi
 
 if [ $PARAMETERSERR -ne 0 ] ; then
     echoerr "cannot continue ... exiting"
-    exit 1
-fi
-
-if [ -d "${CADIR}" ] ; then
-    echoerr "... CA directory ${CADIR} already exists"
     exit 1
 fi
 
@@ -180,20 +199,21 @@ if [ "$MYDEBUG" ] ; then
     echo "CADIR            = $CADIR"
 fi
 
-TMP=`echo "${PASSWORD}" | openssl enc -aes-128-cbc -a -salt -pass pass:${CFGPASSWORD}`
+PASSWORDHASH=`echo "${PASSWORD}" | openssl enc -aes-128-cbc -a -salt -pass pass:${CFGPASSWORD}`
+PKCS12HASH=`echo "${PKCS12PASS}" | openssl enc -aes-128-cbc -a -salt -pass pass:${CFGPASSWORD}`
 > $SIMPLECACONF
 echo "CANAME=\"${CANAME}\""                         >> $SIMPLECACONF
 echo "CADIR=\"${CADIR}\""                           >> $SIMPLECACONF
-echo "PASSWORD=\"${TMP}\""                          >> $SIMPLECACONF
-echo "COMMONNAME=\"{$COMMONNAME}\""                 >> $SIMPLECACONF
+echo "PASSWORD=\"${PASSWORDHASH}\""                 >> $SIMPLECACONF
+echo "COMMONNAME=\"${COMMONNAME}\""                 >> $SIMPLECACONF
 echo "COUNTRY=\"${COUNTRY}\""                       >> $SIMPLECACONF
 echo "COUNTRYCODE=\"${COUNTRYCODE}\""               >> $SIMPLECACONF
 echo "LOCALITY=\"${LOCALITY}\""                     >> $SIMPLECACONF
 echo "ORGANIZATION=\"${ORGANIZATION}\""             >> $SIMPLECACONF
-echo "ORGANIZATIONUNIT=\"{$ORGANIZATIONUNIT}\""     >> $SIMPLECACONF
+echo "ORGANIZATIONUNIT=\"${ORGANIZATIONUNIT}\""     >> $SIMPLECACONF
 echo "KEYBITS=${KEYBITS_DEFAULT}"                   >> $SIMPLECACONF
 echo "DAYS=${DAYS_DEFAULT}"                         >> $SIMPLECACONF
-echo "PKCS12PASS=\"${PKCS12PASS}\""                 >> $SIMPLECACONF
+echo "PKCS12PASS=\"${PKCS12HASH}\""                 >> $SIMPLECACONF
 echo "WEB_CRT_DIR=\"${WEB_CRT_DIR_DEFAULT}\""       >> $SIMPLECACONF
 echo "WEB_PKCS12_DIR=\"${WEB_PKCS12_DIR_DEFAULT}\"" >> $SIMPLECACONF
 echo "SIMPLECALOG=\"${SIMPLECALOG}\""               >> $SIMPLECACONF
@@ -251,7 +271,7 @@ CADIRINM="${CADIR}/${INMSUBDIR}"
 mkdir ${CADIRINM}
 chmod 700 ${CADIRINM}
 cd ${CADIRINM}
-mkdir certs crl csr newcerts private
+mkdir certs crl csr newcerts private pkcs12
 chmod 700 private
 touch index.txt
 echo 1000 > serial
@@ -290,12 +310,7 @@ cat ${INMSUBDIR}/certs/intermediate.cert.pem certs/ca.cert.pem > ${INMSUBDIR}/ce
 chmod 444 ${INMSUBDIR}/certs/ca-chain.cert.pem
 
 exit
-#
-#./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p heslo -g heslo2 -f /root/myCA
 
+# ./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p TajneHeslo -g Heslo123 -f /root/CertAuth -k Banicek
 
-todo:
- - Check OK at the last line of intermediate_certificate.txt
- - copy binary to /bin
- - use depasswording
 
