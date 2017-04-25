@@ -61,7 +61,6 @@ fi
 CFGPASSWORD=$1
 FQDN=$2
 shift
-shift
 
 TMP=`echo "${PASSWORD}" | openssl enc -aes-128-cbc -a -d -salt -pass pass:${CFGPASSWORD} 2>/dev/null`
 if [ $? -gt 0 ] ; then
@@ -79,20 +78,14 @@ PKCS12PASS=${TMP}
 
 echolog ""
 echolog "$0 <password> $FQDN $*"
-if [ $# -gt 0 ] ; then
-    SANMODE=1
-    ALTNAMES="DNS:${FQDN},"
-    COMMA=""
-    for I in ${@} ; do
-        echo $I
-        ALTNAMES="${ALTNAMES}${COMMA}DNS:${I}"
-        COMMA=","
-    done
-    echolog   "SAN mode, ALTNAMES=$ALTNAMES"
-else
-    SANMODE=0
-    echolog "SAN off"
-fi
+ALTNAMES="DNS:${FQDN},"
+COMMA=""
+for I in ${@} ; do
+    echo $I
+    ALTNAMES="${ALTNAMES}${COMMA}DNS:${I}"
+    COMMA=","
+done
+echolog   "SAN mode, ALTNAMES=$ALTNAMES"
 
 echodebug "PASSWORD   = $PASSWORD"
 echodebug "PKCS12PASS = $PKCS12PASS"
@@ -112,48 +105,33 @@ chmod 400 ${CA_KEY_DIR}/${FQDN}.key.pem
 echolog "Create a certificate:"
 # openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
 SUBJ="/C=${COUNTRYCODE}/ST=${COUNTRY}/L=${LOCALITY}/O=${ORGANIZATION}/OU=${ORGANIZATIONUNIT}/CN=${FQDN}"
-echo "SUBJ - ${SUBJ} "
-if [ $SANMODE -eq 0 ] ; then
-    #openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "/C=${C}/ST=${ST}/L=${L}/O=${O}/OU=${OU}/CN=${FQDN}"
-    #set -x
-    echolog "openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj \"${SUBJ}\" "
-    eval openssl req -config ${OPENSSLCONF} -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj \"${SUBJ}\"
-    opensslresultlog $?
-else
-    echolog "SAN mode"
-    mkdir -p ${SANDIR}
+echolog "SUBJ - ${SUBJ} "
+mkdir -p ${SANDIR}
 
-    CUSTOMOPENSSLCONF="${SANDIR}/${FQDN}-SAN.openssl.conf"
-    ALTNAMESTR1="[ req_ext ]\nsubjectAltName = ${ALTNAMES}"
-    ALTNAMESTR2="subjectAltName = ${ALTNAMES}"
+CUSTOMOPENSSLCONF="${SANDIR}/${FQDN}-SAN.openssl.conf"
+ALTNAMESTR1="[ req_ext ]\nsubjectAltName = ${ALTNAMES}"
+ALTNAMESTR2="subjectAltName = ${ALTNAMES}"
 
-    > ${CUSTOMOPENSSLCONF}
-    while read SSLCONFLINE ; do
-        if [[ ${SSLCONFLINE} == *"__REQ_EXTENSIONS__"* ]] ; then
-            SSLCONFLINE="req_extensions = req_ext"
-        elif [[ ${SSLCONFLINE} == *"__REQ_EXT-SUBJECTALTNAME__"* ]] ; then
-            SSLCONFLINE=${ALTNAMESTR1}
-        elif [[ ${SSLCONFLINE} == *"__SUBJECTALTNAME__"* ]] ; then
-            SSLCONFLINE=${ALTNAMESTR2}
-        fi
-        echo -e "${SSLCONFLINE}" >> ${CUSTOMOPENSSLCONF}
-    done < ${OPENSSLCONF}
-    echolog "openssl req  -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj \"${SUBJ}\" -config ${CUSTOMOPENSSLCONF}"
-    openssl req  -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "${SUBJ}" -config ${CUSTOMOPENSSLCONF}
-    opensslresultlog $?
-fi
+> ${CUSTOMOPENSSLCONF}
+while read SSLCONFLINE ; do
+    if [[ ${SSLCONFLINE} == *"__REQ_EXTENSIONS__"* ]] ; then
+        SSLCONFLINE="req_extensions = req_ext"
+    elif [[ ${SSLCONFLINE} == *"__REQ_EXT-SUBJECTALTNAME__"* ]] ; then
+        SSLCONFLINE=${ALTNAMESTR1}
+    elif [[ ${SSLCONFLINE} == *"__SUBJECTALTNAME__"* ]] ; then
+        SSLCONFLINE=${ALTNAMESTR2}
+    fi
+    echo -e "${SSLCONFLINE}" >> ${CUSTOMOPENSSLCONF}
+done < ${OPENSSLCONF}
+echolog "openssl req  -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj \"${SUBJ}\" -config ${CUSTOMOPENSSLCONF}"
+openssl req  -key ${CA_KEY_DIR}/${FQDN}.key.pem -new -sha256 -out ${CA_CSR_DIR}/${FQDN}.csr.pem -subj "${SUBJ}" -config ${CUSTOMOPENSSLCONF}
+opensslresultlog $?
 
 # CSR:
 echolog "CSR:"
-if [ $SANMODE -eq 0 ] ; then
-    echolog "openssl ca -batch -config ${OPENSSLCONF} -extensions server_cert -days ${DAYS} -notext -md sha256 -in ${CA_CSR_DIR}/${FQDN}.csr.pem -out ${CA_CRT_DIR}/${FQDN}.cert.pem -passin pass:{PASSWORD}"
-    openssl ca -batch -config ${OPENSSLCONF} -extensions server_cert -days ${DAYS} -notext -md sha256 -in ${CA_CSR_DIR}/${FQDN}.csr.pem -out ${CA_CRT_DIR}/${FQDN}.cert.pem -passin pass:${PASSWORD}
-    opensslresultlog $?
-else
-    echolog "openssl ca -batch -config ${CUSTOMOPENSSLCONF} -extensions server_cert -days ${DAYS} -notext -md sha256 -in ${CA_CSR_DIR}/${FQDN}.csr.pem -out ${CA_CRT_DIR}/${FQDN}.cert.pem -passin pass:{PASSWORD}"
-    openssl ca -batch -config ${CUSTOMOPENSSLCONF} -extensions server_cert -days ${DAYS} -notext -md sha256 -in ${CA_CSR_DIR}/${FQDN}.csr.pem -out ${CA_CRT_DIR}/${FQDN}.cert.pem -passin pass:${PASSWORD}
-    opensslresultlog $?
-fi
+echolog "openssl ca -batch -config ${CUSTOMOPENSSLCONF} -extensions server_cert -days ${DAYS} -notext -md sha256 -in ${CA_CSR_DIR}/${FQDN}.csr.pem -out ${CA_CRT_DIR}/${FQDN}.cert.pem -passin pass:{PASSWORD}"
+openssl ca -batch -config ${CUSTOMOPENSSLCONF} -extensions server_cert -days ${DAYS} -notext -md sha256 -in ${CA_CSR_DIR}/${FQDN}.csr.pem -out ${CA_CRT_DIR}/${FQDN}.cert.pem -passin pass:${PASSWORD}
+opensslresultlog $?
 echolog "intermediate/index.txt:"
 tail -n 1 ${CADIR}/intermediate/index.txt >> $SIMPLECALOG
 
@@ -195,3 +173,6 @@ echolog "$FQDN - end"
 exit
 
 # simpleca.createhostcertificate.sh Hesloconfig host.aaa.cz www.aaa.cz
+# HSTS
+# friendly name
+
