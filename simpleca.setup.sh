@@ -312,5 +312,3 @@ chmod 444 ${INMSUBDIR}/certs/ca-chain.cert.pem
 exit
 
 # ./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p TajneHeslo -g Heslo123 -f /root/CertAuth -k Banicek
-
-

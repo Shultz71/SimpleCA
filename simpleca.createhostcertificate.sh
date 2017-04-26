@@ -78,7 +78,6 @@ PKCS12PASS=${TMP}
 
 echolog ""
 echolog "$0 <password> $FQDN $*"
-ALTNAMES="DNS:${FQDN},"
 COMMA=""
 for I in ${@} ; do
     echo $I
@@ -86,10 +85,12 @@ for I in ${@} ; do
     COMMA=","
 done
 echolog   "SAN mode, ALTNAMES=$ALTNAMES"
+echodebug "SAN mode, ALTNAMES=$ALTNAMES"
 
 echodebug "PASSWORD   = $PASSWORD"
 echodebug "PKCS12PASS = $PKCS12PASS"
 echodebug "FQDN       = $FQDN"
+
 # Main part
 cd $CA_ROOT_DIR
 
@@ -158,7 +159,7 @@ openssl x509 -noout -text -in ${CA_CRT_DIR}/${FQDN}.cert.pem | grep -v "^ \+[0-9
 echolog "pkcs12:"
 #openssl pkcs12 -export -in intermediate/certs/virtsrv1.example.com.cert.pem -inkey intermediate/private/virtsrv1.example.com.key.pem -out virtsrv1.example.com.pkcs12
 echolog "openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pkcs12 -password pass:PKCS12PASS"
-openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pkcs12 -password pass:${PKCS12PASS}
+openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pkcs12 -name "${FQDN}" -password pass:${PKCS12PASS}
 
 if [ -d ${WEB_PKCS12_DIR} ] ; then
     echolog "Copying ${CA_PKCS12_DIR}/${FQDN}.pkcs12 to ${WEB_PKCS12_DIR}"
@@ -175,4 +176,4 @@ exit
 # simpleca.createhostcertificate.sh Hesloconfig host.aaa.cz www.aaa.cz
 # HSTS
 # friendly name
-
+# pokud jsou i jmenne aliasy FQDN je tam 2x
