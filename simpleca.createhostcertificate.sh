@@ -38,7 +38,7 @@ opensslresultlog () {
 }
 #-----------------------------------------------------------------
 printhelp () {
-    echo "$TDL_NAME usage:"
+    echo "$(basename $0) usage:"
     echo
     echo -e "\t`basename $0` ca_password fqdn [alternativename1 alternativename2 ...]"
     echo -e "\t\tpassword - CA's key password"
@@ -173,7 +173,7 @@ echolog "$FQDN - end"
 
 exit
 
-# simpleca.createhostcertificate.sh Hesloconfig host.aaa.cz www.aaa.cz
+# simpleca.createhostcertificate.sh cfgSecret host.aaa.cz www.aaa.cz 
 # HSTS
 # friendly name
 # pokud jsou i jmenne aliasy FQDN je tam 2x

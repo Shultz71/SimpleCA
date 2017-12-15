@@ -6,6 +6,7 @@
 /bin/rm /etc/simpleca.conf 2>/dev/null
 
 MYDIR="${CADIR-xxx}"
+echo "CA dir = $MYDIR"
 
 if [ -d "${MYDIR}" ] ; then
     echo " MYDIR = ${MYDIR- }"

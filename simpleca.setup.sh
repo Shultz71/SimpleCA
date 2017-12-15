@@ -2,7 +2,8 @@
 # vim: nu ts=4 sw=4 expandtab ignorecase nowrap
 MYDEBUG=1   # debug ON  to disable comment out the line
 
-SIMPLECACONF="/etc/simpleca.conf"
+SIMPLECACONFFILE="simpleca.conf"
+SIMPLECACONFLINK="/etc/${SIMPLECACONFFILE}"
 SIMPLECALOG="/var/log/simpleca.log"
 OPENSSLCONFTEMPLATE="openssl.cnf.TEMPLATE"
 OPENSSLCONFTEMPLATEIM="openssl_im.cnf.TEMPLATE"
@@ -37,19 +38,16 @@ echoerr () {
 echodebug () {
     if [ $MYDEBUG ] ; then  echo "$*"; fi
 }
+#------------------------------------------------
 
 if [ ! `id -u` -eq 0 ] ; then
     echoerr "You are not root - exiting"
     exit 1
 fi
 
-if [ -d "${CADIR}" ] ; then
-    echoerr "... CA directory ${CADIR} already exists"
-    exit 1
-fi
 
-if [ -f $SIMPLECACONF ] ; then
-    echoerr "Configuration file $SIMPLECACONF already exists ... exiting"
+if [ -f $SIMPLECACONFLINK ] ; then
+    echoerr "Configuration file $SIMPLECACONFLINK already exists ... exiting"
     exit 1
 fi
 
@@ -154,7 +152,12 @@ while true ; do
         -f|--cafolder)
             case "$2" in
                 "") shift 2 ;;
-                *) CADIR="$2" ; shift 2 ;;
+                *) CADIR="$2" ; shift 2 
+                    if [ -d "${CADIR}" ] ; then
+                        echoerr "... CA directory ${CADIR} already exists"
+                        exit 1
+                    fi
+                    ;;
             esac ;;
         -h|--help)
             usage
@@ -185,6 +188,7 @@ if [ $PARAMETERSERR -ne 0 ] ; then
     echoerr "cannot continue ... exiting"
     exit 1
 fi
+set -x
 
 if [ "$MYDEBUG" ] ; then
     echo "CANAME           = $CANAME"
@@ -201,7 +205,17 @@ fi
 
 PASSWORDHASH=`echo "${PASSWORD}" | openssl enc -aes-128-cbc -a -salt -pass pass:${CFGPASSWORD}`
 PKCS12HASH=`echo "${PKCS12PASS}" | openssl enc -aes-128-cbc -a -salt -pass pass:${CFGPASSWORD}`
+
+# Prepare the directory ----------------------------------------------------
+mkdir ${CADIR}
+chmod 700 ${CADIR}
+SIMPLECACONF="${CADIR}/$(basename $SIMPLECACONFLINK)"
+echo "XXX- SIMPLECACONF     = $SIMPLECACONF"
+echo "XXX- SIMPLECACONFLINK = $SIMPLECACONFLINK"
+
 > $SIMPLECACONF
+ln -s $SIMPLECACONF $SIMPLECACONFLINK
+
 echo "CANAME=\"${CANAME}\""                         >> $SIMPLECACONF
 echo "CADIR=\"${CADIR}\""                           >> $SIMPLECACONF
 echo "PASSWORD=\"${PASSWORDHASH}\""                 >> $SIMPLECACONF
@@ -224,9 +238,6 @@ WORKDIR=`pwd`
 #   Create the root pair
 #----------------------------------------------------------
 
-# Prepare the directory ----------------------------------------------------
-mkdir ${CADIR}
-chmod 700 ${CADIR}
 cd ${CADIR}
 mkdir certs crl newcerts private
 chmod 700 private
@@ -311,4 +322,6 @@ chmod 444 ${INMSUBDIR}/certs/ca-chain.cert.pem
 
 exit
 
-# ./simpleca.setup.sh -a abc -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p TajneHeslo -g Heslo123 -f /root/CertAuth -k Banicek
+## ./simpleca.setup.sh -a MyCA -n `hostname` -c "Czech Republic" -d CZ -l Ostrava -o "Shultz ltd." -u "IT dept." -p SecretCAPass -g cfgSecret -f /root/CertAuth -k PKCS12secret
+#
+## ./simpleca.setup.sh -a MyCA -n ca.example.com -c "Czech Republic" -d CZ -l Ostrava -o "Example ltd." -u "IT dept." -p SecretCAPass -g cfgSecret -f /root/CertAuth -k PKCS12secret
