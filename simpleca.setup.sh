@@ -188,7 +188,6 @@ if [ $PARAMETERSERR -ne 0 ] ; then
     echoerr "cannot continue ... exiting"
     exit 1
 fi
-set -x
 
 if [ "$MYDEBUG" ] ; then
     echo "CANAME           = $CANAME"
@@ -210,8 +209,6 @@ PKCS12HASH=`echo "${PKCS12PASS}" | openssl enc -aes-128-cbc -a -salt -pass pass:
 mkdir ${CADIR}
 chmod 700 ${CADIR}
 SIMPLECACONF="${CADIR}/$(basename $SIMPLECACONFLINK)"
-echo "XXX- SIMPLECACONF     = $SIMPLECACONF"
-echo "XXX- SIMPLECACONFLINK = $SIMPLECACONFLINK"
 
 > $SIMPLECACONF
 ln -s $SIMPLECACONF $SIMPLECACONFLINK

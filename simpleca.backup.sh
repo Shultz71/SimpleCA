@@ -27,8 +27,6 @@ printhelp () {
 }
 #----------------------------------------------------------------- main()
 
-#echodebug "# = $#"
-
 if [ -f ${SIMPLECACONF} ] ; then
     source ${SIMPLECACONF}
 else
@@ -38,10 +36,12 @@ fi
 
 source $SIMPLECACONF
 
+set -x
+
 CADIRSHORT=$(basename $CADIR)
-mkdir -p $BACDIR
 
 cd $CADIR
+mkdir -p ${BACDIR}
 cd ..
 
 TARFILE="${CADIRSHORT}/${BACDIR}/${CADIRSHORT}.tar"
