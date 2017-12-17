@@ -36,8 +36,6 @@ fi
 
 source $SIMPLECACONF
 
-set -x
-
 CADIRSHORT=$(basename $CADIR)
 
 cd $CADIR
@@ -58,7 +56,7 @@ NEWMD5SUM=$(md5sum $TARFILE | awk '{print $1}')
 
 if [ "$OLDMD5SUM" != "$NEWMD5SUM" ] ; then
     DATE=$(date "+%Y%m%d-%H:%M.%S")
-    NEWFILE="${TARFILE}.${DATE}"
+    NEWFILE="${CADIRSHORT}/${BACDIR}/${CADIRSHORT}.${DATE}.tar"
     cp $TARFILE $NEWFILE
     gzip $NEWFILE
 else

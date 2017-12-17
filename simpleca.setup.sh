@@ -8,6 +8,7 @@ SIMPLECALOG="/var/log/simpleca.log"
 OPENSSLCONFTEMPLATE="openssl.cnf.TEMPLATE"
 OPENSSLCONFTEMPLATEIM="openssl_im.cnf.TEMPLATE"
 CREATECRTCMD="simpleca.createhostcertificate.sh"
+BACKUPCRTCMD="simpleca.backup.sh"
 CRTCMDDIR="/usr/bin"
 INMSUBDIR="intermediate"
 KEYBITS_DEFAULT="2048"
@@ -72,6 +73,14 @@ else
     fi
     cat $CREATECRTCMD > ${CRTCMDDIR}/${CREATECRTCMD}
     chmod 0744 ${CRTCMDDIR}/${CREATECRTCMD}
+fi
+
+if [ ! -f $BACKUPCRTCMD ] ; then
+    echoerr "Cannot found $iBACKUPCRTCMD ... exiting"
+    exit 1
+else
+    cat $BACKUPCRTCMD > ${CRTCMDDIR}/${BACKUPCRTCMD}
+    chmod 0744 ${CRTCMDDIR}/${BACKUPCRTCMD}
 fi
 
 # read the options
