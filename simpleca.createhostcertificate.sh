@@ -153,17 +153,16 @@ opensslresultlog $?
 echolog "openssl x509 -noout -text -in ${CA_CRT_DIR}/${FQDN}.cert.pem"
 openssl x509 -noout -text -in ${CA_CRT_DIR}/${FQDN}.cert.pem | grep -v "^ \+[0-9,a-f][0-9,a-f][0-9,a-f,:]*" >> $SIMPLECALOG
 
-
 # pkcs12
 echolog "pkcs12:"
-#openssl pkcs12 -export -in intermediate/certs/virtsrv1.example.com.cert.pem -inkey intermediate/private/virtsrv1.example.com.key.pem -out virtsrv1.example.com.pkcs12
-echolog "openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pkcs12 -password pass:PKCS12PASS"
-openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pkcs12 -name "${FQDN}" -password pass:${PKCS12PASS}
+#openssl pkcs12 -export -in intermediate/certs/virtsrv1.example.com.cert.pem -inkey intermediate/private/virtsrv1.example.com.key.pem -out virtsrv1.example.com.pfx
+echolog "openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pfx -password pass:PKCS12PASS"
+openssl pkcs12 -export -in ${CA_CRT_DIR}/${FQDN}.cert.pem -inkey ${CA_KEY_DIR}/${FQDN}.key.pem -out ${CA_PKCS12_DIR}/${FQDN}.pfx -name "${FQDN}" -password pass:${PKCS12PASS}
 
 if [ -d ${WEB_PKCS12_DIR} ] ; then
-    echolog "Copying ${CA_PKCS12_DIR}/${FQDN}.pkcs12 to ${WEB_PKCS12_DIR}"
-    cp ${CA_PKCS12_DIR}/${FQDN}.pkcs12 ${WEB_PKCS12_DIR}
-    chmod 644 ${WEB_PKCS12_DIR}/*.pkcs12 >> $SIMPLECALOG 2>&1
+    echolog "Copying ${CA_PKCS12_DIR}/${FQDN}.pfx to ${WEB_PKCS12_DIR}"
+    cp ${CA_PKCS12_DIR}/${FQDN}.pfx ${WEB_PKCS12_DIR}
+    chmod 644 ${WEB_PKCS12_DIR}/*.pfx >> $SIMPLECALOG 2>&1
 else
     echolog "WEB_PKCS12_DIR: ${WEB_PKCS12_DIR} folder doesn't exists"
 fi
